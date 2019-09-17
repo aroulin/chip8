@@ -1,10 +1,8 @@
 const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 32;
 
-//TODO: try returning display pixels and modifying them (should be illegal)
-
 pub struct Display {
-    pixels: Vec<u8>,
+    pub pixels: Vec<u8>,
 }
 
 impl Display {

@@ -22,7 +22,12 @@ impl Chip8 {
     }
 
     pub fn run(&mut self) -> Result<(), std::io::Error> {
+        self.exec_instr(0x00E0);
         return Ok(());
+    }
+
+    pub fn pixels(&self) -> &Vec<u8> {
+        &self.display.pixels
     }
 
     fn exec_instr(&mut self, instr: u16) {
