@@ -41,7 +41,7 @@ impl Chip8 {
             (0x0, 0x0, 0xE, 0x0) =>
                 self.display.clear(),
             (0x7, x, k1, k2) => {
-                let mut vx = &mut self.regs.v[x as usize];
+                let vx = &mut self.regs.v[x as usize];
                 *vx = vx.wrapping_add(make_byte(k1, k2))
             }
             _ =>
