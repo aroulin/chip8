@@ -71,11 +71,22 @@ impl Chip8 {
             }
 
             // 3xkk - SE Vx, byte - Skip next instruction if Vx = kk
-            (0x3, x, k1, k2) => {
+            (0x3, x, k1, k2) =>
                 if self.regs.v[x as usize] == make_byte(k1, k2) {
-                    self.regs.pc += 2; // skip next instruction
+                    self.regs.pc += 2;
                 }
-            }
+
+            // 4xkk - SNE Vx, byte - Skip next instruction if Vx != kk
+            (0x4, x, k1, k2) =>
+                if self.regs.v[x as usize] != make_byte(k1, k2) {
+                    self.regs.pc += 2;
+                }
+
+            // 5xy0 - SE Vx, Vy - Skip next instruction if Vx = Vy
+            (0x5, x, y, 0) =>
+                if self.regs.v[x as usize] == self.regs.v[y as usize] {
+                    self.regs.pc += 2;
+                }
 
             // 7xkk - ADD Vx, byte - Set Vx = Vx + kk
             (0x7, x, k1, k2) => {
@@ -143,6 +154,7 @@ fn chip8_ret_stack_overflow() {
     chip8.regs.sp = 0;
     chip8.exec_instr(0x00EE);
 }
+
 #[test]
 fn chip8_skip_instr() {
     let mut chip8 = Chip8::new();
@@ -152,6 +164,15 @@ fn chip8_skip_instr() {
     chip8.regs.v[4] = 0x55;
     chip8.exec_instr(0x3455);
     assert_eq!(chip8.regs.pc, 0x206);
+    chip8.exec_instr(0x4400);
+    assert_eq!(chip8.regs.pc, 0x20A);
+    chip8.exec_instr(0x4455);
+    assert_eq!(chip8.regs.pc, 0x20C);
+    chip8.exec_instr(0x5450);
+    assert_eq!(chip8.regs.pc, 0x20E);
+    chip8.regs.v[5] = 0x55;
+    chip8.exec_instr(0x5450);
+    assert_eq!(chip8.regs.pc, 0x212);
 }
 
 #[test]
