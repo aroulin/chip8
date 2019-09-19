@@ -41,27 +41,43 @@ impl Chip8 {
         self.regs.pc += 2;
 
         match instr_fields {
+
+            // 00E0 - CLS - Clear the display
             (0x0, 0x0, 0xE, 0x0) =>
                 self.display.clear(),
 
+            // 00EE - RET - Return from a subroutine
+            (0x0, 0x0, 0xE, 0xE) => {
+                if self.regs.sp == 0 {
+                    panic!("Stack underflow at instruction {:X}", self.regs.pc - 2)
+                }
+                self.regs.sp -= 1;
+                self.regs.pc = self.regs.stack[self.regs.sp as usize];
+                self.regs.stack[(self.regs.sp + 1) as usize] = 0; // clear stack
+            }
+
+            // 1nnn - JP addr - Jump to location nnn
             (0x1, n1, n2, n3) =>
                 self.regs.pc = make_12_bits(n1, n2, n3),
 
+            // 2nnn - CALL addr - Call subroutine at nnn
             (0x2, n1, n2, n3) => {
                 self.regs.sp += 1;
                 if self.regs.sp as usize >= self.regs.stack.len() {
-                    panic!("Stack overflow at instruction {:X}", self.regs.pc)
+                    panic!("Stack overflow at instruction {:X}", self.regs.pc - 2)
                 }
-                self.regs.stack[(self.regs.sp - 1) as usize] = self.regs.pc - 2;
+                self.regs.stack[(self.regs.sp - 1) as usize] = self.regs.pc;
                 self.regs.pc = make_12_bits(n1, n2, n3);
             }
 
+            // 3xkk - SE Vx, byte - Skip next instruction if Vx = kk
             (0x3, x, k1, k2) => {
                 if self.regs.v[x as usize] == make_byte(k1, k2) {
                     self.regs.pc += 2; // skip next instruction
                 }
             }
 
+            // 7xkk - ADD Vx, byte - Set Vx = Vx + kk
             (0x7, x, k1, k2) => {
                 let vx = &mut self.regs.v[x as usize];
                 *vx = vx.wrapping_add(make_byte(k1, k2))
@@ -94,26 +110,39 @@ fn chip8_jmp_addr() {
 }
 
 #[test]
-fn chip8_call_addr() {
+fn chip8_call_ret() {
     let mut chip8 = Chip8::new();
     chip8.exec_instr(0x2555);
     assert_eq!(chip8.regs.pc, 0x555);
     assert_eq!(chip8.regs.sp, 1);
-    assert_eq!(chip8.regs.stack[0], 0x200);
+    assert_eq!(chip8.regs.stack[0], 0x202);
     chip8.exec_instr(0x2777);
     assert_eq!(chip8.regs.pc, 0x777);
     assert_eq!(chip8.regs.sp, 2);
-    assert_eq!(chip8.regs.stack[1], 0x555);
+    assert_eq!(chip8.regs.stack[1], 0x557);
+    chip8.exec_instr(0x00EE);
+    assert_eq!(chip8.regs.pc, 0x557);
+    assert_eq!(chip8.regs.sp, 1);
+    chip8.exec_instr(0x00EE);
+    assert_eq!(chip8.regs.pc, 0x202);
+    assert_eq!(chip8.regs.sp, 0);
 }
 
 #[test]
 #[should_panic]
-fn chip8_call_addr_stack_overflow() {
+fn chip8_call_stack_overflow() {
     let mut chip8 = Chip8::new();
     chip8.regs.sp = 15;
     chip8.exec_instr(0x2555);
 }
 
+#[test]
+#[should_panic]
+fn chip8_ret_stack_overflow() {
+    let mut chip8 = Chip8::new();
+    chip8.regs.sp = 0;
+    chip8.exec_instr(0x00EE);
+}
 #[test]
 fn chip8_skip_instr() {
     let mut chip8 = Chip8::new();
