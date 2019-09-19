@@ -58,7 +58,7 @@ impl Chip8 {
 
             // 1nnn - JP addr - Jump to location nnn
             (0x1, n1, n2, n3) =>
-                self.regs.pc = make_12_bits(n1, n2, n3),
+                self.regs.pc = make_tribble(n1, n2, n3),
 
             // 2nnn - CALL addr - Call subroutine at nnn
             (0x2, n1, n2, n3) => {
@@ -67,7 +67,7 @@ impl Chip8 {
                     panic!("Stack overflow at instruction {:X}", self.regs.pc - 2)
                 }
                 self.regs.stack[self.regs.sp - 1] = self.regs.pc;
-                self.regs.pc = make_12_bits(n1, n2, n3);
+                self.regs.pc = make_tribble(n1, n2, n3);
             }
 
             // 3xkk - SE Vx, byte - Skip next instruction if Vx = kk
@@ -95,7 +95,7 @@ fn make_byte(high: u16, low: u16) -> u8 {
     ((high << 4) | low) as u8
 }
 
-fn make_12_bits(n1: u16, n2: u16, n3: u16) -> u16 {
+fn make_tribble(n1: u16, n2: u16, n3: u16) -> u16 {
     assert!(n1 <= 0xFF);
     assert!(n2 <= 0xFF);
     assert!(n3 <= 0xFF);
