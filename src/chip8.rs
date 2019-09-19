@@ -37,6 +37,9 @@ impl Chip8 {
              (instr >> 4) & 0xF,
              (instr) & 0xF);
 
+        // pc now points to next instruction
+        self.regs.pc += 2;
+
         match instr_fields {
             (0x0, 0x0, 0xE, 0x0) =>
                 self.display.clear(),
@@ -49,8 +52,14 @@ impl Chip8 {
                 if self.regs.sp as usize >= self.regs.stack.len() {
                     panic!("Stack overflow at instruction {:X}", self.regs.pc)
                 }
-                self.regs.stack[(self.regs.sp - 1) as usize] = self.regs.pc;
+                self.regs.stack[(self.regs.sp - 1) as usize] = self.regs.pc - 2;
                 self.regs.pc = make_12_bits(n1, n2, n3);
+            }
+
+            (0x3, x, k1, k2) => {
+                if self.regs.v[x as usize] == make_byte(k1, k2) {
+                    self.regs.pc += 2; // skip next instruction
+                }
             }
 
             (0x7, x, k1, k2) => {
@@ -103,6 +112,17 @@ fn chip8_call_addr_stack_overflow() {
     let mut chip8 = Chip8::new();
     chip8.regs.sp = 15;
     chip8.exec_instr(0x2555);
+}
+
+#[test]
+fn chip8_skip_instr() {
+    let mut chip8 = Chip8::new();
+    assert_eq!(chip8.regs.pc, 0x200);
+    chip8.exec_instr(0x3455);
+    assert_eq!(chip8.regs.pc, 0x202);
+    chip8.regs.v[4] = 0x55;
+    chip8.exec_instr(0x3455);
+    assert_eq!(chip8.regs.pc, 0x206);
 }
 
 #[test]
