@@ -52,8 +52,8 @@ impl Chip8 {
                     panic!("Stack underflow at instruction {:X}", self.regs.pc - 2)
                 }
                 self.regs.sp -= 1;
-                self.regs.pc = self.regs.stack[self.regs.sp as usize];
-                self.regs.stack[(self.regs.sp + 1) as usize] = 0; // clear stack
+                self.regs.pc = self.regs.stack[self.regs.sp];
+                self.regs.stack[self.regs.sp + 1] = 0; // clear stack
             }
 
             // 1nnn - JP addr - Jump to location nnn
@@ -63,10 +63,10 @@ impl Chip8 {
             // 2nnn - CALL addr - Call subroutine at nnn
             (0x2, n1, n2, n3) => {
                 self.regs.sp += 1;
-                if self.regs.sp as usize >= self.regs.stack.len() {
+                if self.regs.sp >= self.regs.stack.len() {
                     panic!("Stack overflow at instruction {:X}", self.regs.pc - 2)
                 }
-                self.regs.stack[(self.regs.sp - 1) as usize] = self.regs.pc;
+                self.regs.stack[self.regs.sp - 1] = self.regs.pc;
                 self.regs.pc = make_12_bits(n1, n2, n3);
             }
 
