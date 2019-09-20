@@ -1,6 +1,7 @@
 use chip8::Chip8;
 
 pub mod chip8;
+pub mod utils;
 
 fn main() {
     let mut chip8 = Chip8::new();
