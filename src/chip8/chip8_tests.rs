@@ -72,3 +72,31 @@ fn chip8_add_byte() {
     chip8.exec_instr(0x7A25);
     assert_eq!(chip8.regs.v[10], 0x25);
 }
+
+#[test]
+fn chip8_load_instr() {
+    let mut chip8 = Chip8::new();
+    assert_eq!(chip8.regs.v[4], 0x00);
+    chip8.exec_instr(0x6455);
+    assert_eq!(chip8.regs.v[4], 0x55);
+    chip8.exec_instr(0x8540);
+    assert_eq!(chip8.regs.v[5], 0x55);
+}
+
+#[test]
+fn chip8_arithmetic_logic() {
+    let mut chip8 = Chip8::new();
+    chip8.regs.v[1] = 0b0011_1010;
+    chip8.regs.v[2] = 0b0111_1111;
+    chip8.exec_instr(0x8121); // OR
+    assert_eq!(chip8.regs.v[1], 0b0111_1111);
+    assert_eq!(chip8.regs.v[2], 0b0111_1111);
+
+    chip8.regs.v[1] = 0b0011_1010;
+    chip8.exec_instr(0x8122); // AND
+    assert_eq!(chip8.regs.v[1], 0b0011_1010);
+
+    chip8.regs.v[1] = 0b0011_1010;
+    chip8.exec_instr(0x8123); // XOR
+    assert_eq!(chip8.regs.v[1], 0b0100_0101);
+}

@@ -1,5 +1,6 @@
 use display::Display;
 use registers::Registers;
+
 use crate::utils::*;
 
 mod registers;
@@ -91,6 +92,22 @@ impl Chip8 {
                 if self.regs.v[x as usize] == self.regs.v[y as usize] {
                     self.regs.pc += 2;
                 }
+
+            // 6xkk - LD Vx, byte - Set Vx = kk
+            (0x6, x, k1, k2) =>
+                self.regs.v[x as usize] = make_byte(k1, k2),
+
+            (0x8, x, y, op) => {
+                let operation: fn(u8, u8) -> u8 = match op {
+                    0 => | _ , y | y,       // 8xy0 - LD Vx, Vy  - Set Vx = Vy
+                    1 => | x, y| (x | y),   // 8xy1 - OR Vx, Vy  - Set Vx = Vx OR Vy
+                    2 => | x, y| (x & y),   // 8xy2 - AND Vx, Vy - Set Vx = Vx AND Vy
+                    3 => | x, y| (x ^ y),   // 8xy3 - XOR Vx, Vy - Set Vx = Vx XOR Vy
+                    _ => panic!("Unknown opcode in instruction {:X}", instr)
+                };
+                self.regs.v[x as usize] = operation(self.regs.v[x as usize],
+                                                    self.regs.v[y as usize])
+            }
 
             // 7xkk - ADD Vx, byte - Set Vx = Vx + kk
             (0x7, x, k1, k2) => {
