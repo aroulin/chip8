@@ -1,8 +1,6 @@
 use display::Display;
 use registers::Registers;
 
-use crate::utils::*;
-
 mod registers;
 mod display;
 
@@ -15,6 +13,31 @@ pub struct Chip8 {
     memory: Vec<u8>,
     regs: Registers,
     display: Display,
+}
+
+#[derive(Debug)]
+enum Opcode {
+    Imm { op: u8, nnn: u16 },
+    RegImm { op: u8, x: usize, kk: u8 },
+    RegReg { op: u8, x: usize, y: usize, op2: u8 },
+}
+
+impl From<u16> for Opcode {
+    fn from(opcode: u16) -> Self {
+        let op = (opcode >> 12) as u8;
+        let nnn = opcode & 0xFFF;
+        let x = ((opcode >> 8) & 0xF) as usize;
+        let kk = (opcode & 0xFF) as u8;
+        let y = ((opcode >> 4) & 0xF) as usize;
+        let op2 = (opcode & 0xF) as u8;
+
+        match op {
+            0 | 1 | 2 | 0xA | 0xB => Opcode::Imm { op, nnn },
+            3 | 4 | 6 | 7 | 0xC | 0xE | 0xF => Opcode::RegImm { op, x, kk },
+            5 | 8 | 9 | 0xD => Opcode::RegReg { op, x, y, op2 },
+            _ => panic!("Unknown")
+        }
+    }
 }
 
 impl Chip8 {
@@ -36,23 +59,15 @@ impl Chip8 {
     }
 
     fn exec_instr(&mut self, instr: u16) {
-        let instr_fields =
-            ((instr) >> 12,
-             (instr >> 8) & 0xF,
-             (instr >> 4) & 0xF,
-             (instr) & 0xF);
-
         // pc now points to next instruction
         self.regs.pc += 2;
 
-        match instr_fields {
-
+        match Opcode::from(instr) {
             // 00E0 - CLS - Clear the display
-            (0x0, 0x0, 0xE, 0x0) =>
-                self.display.clear(),
+            Opcode::Imm { op: 0, nnn: 0xE0 } => self.display.clear(),
 
             // 00EE - RET - Return from a subroutine
-            (0x0, 0x0, 0xE, 0xE) => {
+            Opcode::Imm { op: 0, nnn: 0xEE } => {
                 if self.regs.sp == 0 {
                     panic!("Stack underflow at instruction {:X}", self.regs.pc - 2)
                 }
@@ -62,58 +77,54 @@ impl Chip8 {
             }
 
             // 1nnn - JP addr - Jump to location nnn
-            (0x1, n1, n2, n3) =>
-                self.regs.pc = make_tribble(n1, n2, n3),
+            Opcode::Imm { op: 1, nnn } => self.regs.pc = nnn,
 
             // 2nnn - CALL addr - Call subroutine at nnn
-            (0x2, n1, n2, n3) => {
+            Opcode::Imm { op: 2, nnn } => {
                 self.regs.sp += 1;
                 if self.regs.sp >= self.regs.stack.len() {
                     panic!("Stack overflow at instruction {:X}", self.regs.pc - 2)
                 }
                 self.regs.stack[self.regs.sp - 1] = self.regs.pc;
-                self.regs.pc = make_tribble(n1, n2, n3);
+                self.regs.pc = nnn;
             }
 
             // 3xkk - SE Vx, byte - Skip next instruction if Vx = kk
-            (0x3, x, k1, k2) =>
-                if self.regs.v[x as usize] == make_byte(k1, k2) {
+            Opcode::RegImm { op: 3, x, kk } =>
+                if self.regs.v[x] == kk {
                     self.regs.pc += 2;
                 }
 
             // 4xkk - SNE Vx, byte - Skip next instruction if Vx != kk
-            (0x4, x, k1, k2) =>
-                if self.regs.v[x as usize] != make_byte(k1, k2) {
+            Opcode::RegImm { op: 4, x, kk } =>
+                if self.regs.v[x] != kk {
                     self.regs.pc += 2;
                 }
 
             // 5xy0 - SE Vx, Vy - Skip next instruction if Vx = Vy
-            (0x5, x, y, 0) =>
-                if self.regs.v[x as usize] == self.regs.v[y as usize] {
+            Opcode::RegReg { op: 5, x, y, op2: 0 } =>
+                if self.regs.v[x] == self.regs.v[y] {
                     self.regs.pc += 2;
                 }
 
             // 6xkk - LD Vx, byte - Set Vx = kk
-            (0x6, x, k1, k2) =>
-                self.regs.v[x as usize] = make_byte(k1, k2),
-
-            (0x8, x, y, op) => {
-                let operation: fn(u8, u8) -> u8 = match op {
-                    0 => | _ , y | y,       // 8xy0 - LD Vx, Vy  - Set Vx = Vy
-                    1 => | x, y| (x | y),   // 8xy1 - OR Vx, Vy  - Set Vx = Vx OR Vy
-                    2 => | x, y| (x & y),   // 8xy2 - AND Vx, Vy - Set Vx = Vx AND Vy
-                    3 => | x, y| (x ^ y),   // 8xy3 - XOR Vx, Vy - Set Vx = Vx XOR Vy
-                    _ => panic!("Unknown opcode in instruction {:X}", instr)
-                };
-                self.regs.v[x as usize] = operation(self.regs.v[x as usize],
-                                                    self.regs.v[y as usize])
-            }
+            Opcode::RegImm { op: 6, x, kk } => self.regs.v[x] = kk,
 
             // 7xkk - ADD Vx, byte - Set Vx = Vx + kk
-            (0x7, x, k1, k2) => {
-                let vx = &mut self.regs.v[x as usize];
-                *vx = vx.wrapping_add(make_byte(k1, k2))
+            Opcode::RegImm { op: 7, x, kk } =>
+                self.regs.v[x] = self.regs.v[x].wrapping_add(kk),
+
+            Opcode::RegReg { op: 8, x, y, op2 } => {
+                let operation: fn(u8, u8) -> u8 = match op2 {
+                    0 => |_, y| y,       // 8xy0 - LD Vx, Vy  - Set Vx = Vy
+                    1 => |x, y| (x | y),   // 8xy1 - OR Vx, Vy  - Set Vx = Vx OR Vy
+                    2 => |x, y| (x & y),   // 8xy2 - AND Vx, Vy - Set Vx = Vx AND Vy
+                    3 => |x, y| (x ^ y),   // 8xy3 - XOR Vx, Vy - Set Vx = Vx XOR Vy
+                    _ => panic!("Unknown opcode in instruction {:X}", instr)
+                };
+                self.regs.v[x] = operation(self.regs.v[x], self.regs.v[y])
             }
+
             _ =>
                 panic!("Unknown instruction {:X}", instr)
         } // end match instr
