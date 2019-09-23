@@ -99,4 +99,26 @@ fn chip8_arithmetic_logic() {
     chip8.regs.v[1] = 0b0011_1010;
     chip8.exec_instr(0x8123); // XOR
     assert_eq!(chip8.regs.v[1], 0b0100_0101);
+
+    chip8.regs.v[1] = 0x20;
+    chip8.regs.v[2] = 0x10;
+    chip8.exec_instr(0x8124); // ADD
+    assert_eq!(chip8.regs.v[1], 0x30);
+    assert_eq!(chip8.regs.v[0xF], 0);
+
+    chip8.regs.v[1] = 0xFF;
+    chip8.regs.v[2] = 0x10;
+    chip8.exec_instr(0x8124); // ADD
+    assert_eq!(chip8.regs.v[1], 0x0F);
+    assert_eq!(chip8.regs.v[0xF], 1);
+
+    chip8.regs.v[1] = 0x80;
+    chip8.exec_instr(0x812E); // SHL
+    assert_eq!(chip8.regs.v[1], 0x0);
+    assert_eq!(chip8.regs.v[0xF], 1);
+
+    chip8.regs.v[1] = 10;
+    chip8.exec_instr(0x812E); // SHL
+    assert_eq!(chip8.regs.v[1], 20);
+    assert_eq!(chip8.regs.v[0xF], 0);
 }

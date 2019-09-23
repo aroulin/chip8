@@ -13,6 +13,14 @@ pub struct Chip8 {
     memory: Vec<u8>,
     regs: Registers,
     display: Display,
+
+    /// legacy mode:
+    /// SHR Vx, Vy => VF = Vy & 1; Vx = Vy >> 1;
+    /// SHL Vx, Vy => VF = Vy & 1; Vx = Vy << 1;
+    /// Non-legacy-mode:
+    /// SHR Vx, Vy => VF = Vx & 1; Vx = Vx >> 1
+    /// SHL Vx, Vy => VF = Vx & 1; Vx = Vx << 1;
+    legacy_mode: bool,
 }
 
 #[derive(Debug)]
@@ -46,6 +54,7 @@ impl Chip8 {
             memory: vec![0; MEM_SIZE],
             regs: Registers::new(),
             display: Display::new(),
+            legacy_mode: false,
         }
     }
 
@@ -114,15 +123,53 @@ impl Chip8 {
             Opcode::RegImm { op: 7, x, kk } =>
                 self.regs.v[x] = self.regs.v[x].wrapping_add(kk),
 
-            Opcode::RegReg { op: 8, x, y, op2 } => {
-                let operation: fn(u8, u8) -> u8 = match op2 {
-                    0 => |_, y| y,       // 8xy0 - LD Vx, Vy  - Set Vx = Vy
-                    1 => |x, y| (x | y),   // 8xy1 - OR Vx, Vy  - Set Vx = Vx OR Vy
-                    2 => |x, y| (x & y),   // 8xy2 - AND Vx, Vy - Set Vx = Vx AND Vy
-                    3 => |x, y| (x ^ y),   // 8xy3 - XOR Vx, Vy - Set Vx = Vx XOR Vy
-                    _ => panic!("Unknown opcode in instruction {:X}", instr)
-                };
-                self.regs.v[x] = operation(self.regs.v[x], self.regs.v[y])
+            // 8xy0 - LD Vx, Vy  - Set Vx = Vy
+            Opcode::RegReg { op: 8, x, y, op2: 0 } => self.regs.v[x] = self.regs.v[y],
+            // 8xy1 - OR Vx, Vy  - Set Vx = Vx OR Vy
+            Opcode::RegReg { op: 8, x, y, op2: 1 } => self.regs.v[x] |= self.regs.v[y],
+            // 8xy2 - AND Vx, Vy - Set Vx = Vx AND Vy
+            Opcode::RegReg { op: 8, x, y, op2: 2 } => self.regs.v[x] &= self.regs.v[y],
+            // 8xy3 - XOR Vx, Vy - Set Vx = Vx XOR Vy
+            Opcode::RegReg { op: 8, x, y, op2: 3 } => self.regs.v[x] ^= self.regs.v[y],
+            // 8xy4 - ADD Vx, Vy - Set Vx = Vx + Vy - set VF = carry
+            Opcode::RegReg { op: 8, x, y, op2: 4 } => {
+                let (res, overflow) = self.regs.v[x].overflowing_add(self.regs.v[y]);
+                self.regs.v[x] = res;
+                self.regs.v[0xF] = overflow as u8;
+            }
+            // 8xy5 - SUB Vx, Vy - Set Vx = Vx - Vy, set VF = NOT borrow
+            Opcode::RegReg { op: 8, x, y, op2: 5 } => {
+                let (res, overflow) = self.regs.v[x].overflowing_sub(self.regs.v[y]);
+                self.regs.v[x] = res;
+                self.regs.v[0xF] = (!overflow) as u8;
+            }
+            // 8xy6 - SHR Vx {, Vy} - Set Vx = Vx SHR 1
+            Opcode::RegReg { op: 8, x, y, op2: 6 } => {
+                if self.legacy_mode == true {
+                    self.regs.v[0xF] = self.regs.v[y] & 1;
+                    self.regs.v[x] = self.regs.v[y] >> 1;
+                } else {
+                    self.regs.v[0xF] = self.regs.v[x] & 1;
+                    self.regs.v[x] >>= 1;
+                }
+            }
+
+            // 8xy7 - SUBN Vx, Vy - Set Vx = Vy - Vx, set VF = NOT borrow
+            Opcode::RegReg { op: 8, x, y, op2: 7 } => {
+                let (res, overflow) = self.regs.v[y].overflowing_sub(self.regs.v[x]);
+                self.regs.v[x] = res;
+                self.regs.v[0xF] = (!overflow) as u8;
+            }
+
+            // 8xyE - SHL Vx {, Vy} - Set Vx = Vx SHL 1
+            Opcode::RegReg { op: 8, x, y, op2: 0xE } => {
+                if self.legacy_mode == true {
+                    self.regs.v[0xF] = (self.regs.v[y] >> 7) & 1;
+                    self.regs.v[x] = self.regs.v[y] << 1;
+                } else {
+                    self.regs.v[0xF] = (self.regs.v[x] >> 7) & 1;
+                    self.regs.v[x] <<= 1;
+                }
             }
 
             _ =>
