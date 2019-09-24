@@ -172,6 +172,22 @@ impl Chip8 {
                 }
             }
 
+            // 9xy0 - SNE Vx, Vy - Skip next instruction if Vx != Vy
+            Opcode::RegReg { op: 9, x, y, op2: 0 } => {
+                if self.regs.v[x] == self.regs.v[y] {
+                    self.regs.pc += 2
+                }
+            }
+
+            // Annn - LD I, addr - Set I = nnn
+            Opcode::Imm { op: 0xA, nnn } => self.regs.i = nnn,
+
+            // Bnnn - JP V0, addr - Jump to location nnn + V0 TODO: overflow?
+            Opcode::Imm { op: 0xB, nnn } => self.regs.pc = nnn + self.regs.v[0] as u16,
+
+            // Cxkk - RND Vx, byte - Set Vx = random byte AND kk
+            Opcode::RegImm { op: 0xC, x, kk } => self.regs.v[x] = rand::random::<u8>() & kk,
+
             _ =>
                 panic!("Unknown instruction {:X}", instr)
         } // end match instr
