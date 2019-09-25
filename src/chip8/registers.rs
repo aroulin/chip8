@@ -1,6 +1,6 @@
 pub struct Registers {
     pub v: Vec<u8>,
-    pub i: u16,
+    pub i: usize,
     pub pc: u16,
     pub sp: usize,
     pub stack: Vec<u16>,

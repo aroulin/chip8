@@ -1,4 +1,5 @@
 use display::Display;
+use display::Sprite;
 use registers::Registers;
 
 mod registers;
@@ -65,8 +66,8 @@ impl Chip8 {
         return Ok(());
     }
 
-    pub fn pixels(&self) -> &Vec<u8> {
-        &self.display.pixels
+    pub fn pixels(&self) -> Vec<u8> {
+        self.display.pixels()
     }
 
     fn exec_instr(&mut self, instr: u16) {
@@ -187,13 +188,27 @@ impl Chip8 {
             }
 
             // Annn - LD I, addr - Set I = nnn
-            Opcode::Imm { op: 0xA, nnn } => self.regs.i = nnn,
+            Opcode::Imm { op: 0xA, nnn } => self.regs.i = nnn as usize,
 
             // Bnnn - JP V0, addr - Jump to location nnn + V0 TODO: overflow?
             Opcode::Imm { op: 0xB, nnn } => self.regs.pc = nnn + self.regs.v[0] as u16,
 
             // Cxkk - RND Vx, byte - Set Vx = random byte AND kk
             Opcode::RegImm { op: 0xC, x, kk } => self.regs.v[x] = rand::random::<u8>() & kk,
+
+            // Dxyn - DRW Vx, Vy, nibble
+            // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
+            Opcode::RegReg { op: 0xD, x, y, op2: n } => {
+                let mut sprite_bytes = Vec::new();
+                for i in 0..n {
+                    let byte = self.memory[self.regs.i + i as usize];
+                    sprite_bytes.push(byte);
+                }
+
+                let sprite = Sprite::new(sprite_bytes);
+                let collision = self.display.draw_sprite(&sprite, x, y);
+                self.regs.v[0xF] = collision as u8;
+            }
 
             _ =>
                 panic!("Unknown instruction {:X}", instr)
