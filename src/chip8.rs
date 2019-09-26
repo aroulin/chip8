@@ -66,7 +66,7 @@ impl Chip8 {
         return Ok(());
     }
 
-    pub fn pixels(&self) -> Vec<u8> {
+    pub fn pixels(&self) -> &Vec<Vec<u8>> {
         self.display.pixels()
     }
 
