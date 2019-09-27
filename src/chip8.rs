@@ -210,6 +210,19 @@ impl Chip8 {
                 self.regs.v[0xF] = collision as u8;
             }
 
+            // Fx07 - LD Vx, DT - Set Vx = delay timer value
+            Opcode::RegImm { op: 0xF, x, kk: 0x07 } => self.regs.v[x] = self.regs.dt,
+
+            // Fx15 - LD DT, Vx - Set delay timer = Vx
+            Opcode::RegImm { op: 0xF, x, kk: 0x15 } => self.regs.dt = self.regs.v[x],
+
+            // Fx18 - LD ST, Vx - Set sound timer = Vx
+            Opcode::RegImm{ op: 0xF, x, kk: 0x18 } => self.regs.st = self.regs.v[x],
+
+            // Fx1E - ADD I, Vx => Set I = I + Vx
+            Opcode::RegImm{ op: 0xF, x, kk: 0x1E } =>
+                self.regs.i = self.regs.i.wrapping_add(self.regs.v[x] as usize),
+
             _ =>
                 panic!("Unknown instruction {:X}", instr)
         } // end match instr
