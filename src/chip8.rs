@@ -256,7 +256,10 @@ impl Chip8 {
 
             // Fx33 - LD B, Vx - Store BCD representation of Vx in memory locations I, I+1, and I+2
             Opcode::RegImm { op: 0xF, x, kk: 0x33 } => {
-                //TODO: Fx33 store BCD representation
+                let value = self.regs.v[x];
+                self.memory[self.regs.i + 2] = value % 10;
+                self.memory[self.regs.i + 1] = (value / 10) % 10;
+                self.memory[self.regs.i] = (value / 100) % 10;
             }
 
             // Fx55 - LD [I], Vx - Store registers V0 through Vx in memory starting at location I
