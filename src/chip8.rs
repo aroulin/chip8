@@ -2,6 +2,8 @@ use display::Display;
 use display::Sprite;
 use registers::Registers;
 
+use crate::chip8::display::FONT;
+
 mod registers;
 mod display;
 
@@ -58,13 +60,20 @@ impl From<u16> for Opcode {
 
 impl Chip8 {
     pub fn new() -> Chip8 {
-        Chip8 {
+        let mut chip8 = Chip8 {
             memory: vec![0; MEM_SIZE],
             regs: Registers::new(),
             display: Display::new(),
             keyboard: vec![true; KBD_SIZE],
             legacy_mode: false,
+        };
+
+        // store font data
+        for i in 0..FONT.len() {
+            chip8.memory[i] = FONT[i];
         }
+
+        chip8
     }
 
     pub fn run(&mut self) -> Result<(), std::io::Error> {
@@ -236,7 +245,13 @@ impl Chip8 {
 
             // Fx0A - LD Vx, K - Wait for a key press, store the value of the key in Vx
             Opcode::RegImm { op: 0xF, x, kk: 0x0A } => {
-                //TODO: Fx0A - wait for key press
+                //TODO: optimize waiting
+                let mut key_pressed = None;
+                while key_pressed == None {
+                    key_pressed = self.keyboard.iter().position(|k| *k);
+                };
+
+                self.regs.v[x] = key_pressed.unwrap() as u8;
             }
 
             // Fx15 - LD DT, Vx - Set delay timer = Vx
@@ -251,7 +266,11 @@ impl Chip8 {
 
             // Fx29 - LD F, Vx - Set I = location of sprite for digit Vx
             Opcode::RegImm { op: 0xF, x, kk: 0x29 } => {
-                //TODO: Fx29 set sprite location for digit Vx
+                let value = self.regs.v[x];
+                if value > 0xF {
+                    panic!("instr {:X}: Vx {:X} must be a digit not larger than 0xF", instr, value)
+                }
+                self.regs.i = (value as usize) * 5; /* five bytes per font digit */
             }
 
             // Fx33 - LD B, Vx - Store BCD representation of Vx in memory locations I, I+1, and I+2
