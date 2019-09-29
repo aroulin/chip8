@@ -122,3 +122,15 @@ fn chip8_arithmetic_logic() {
     assert_eq!(chip8.regs.v[1], 20);
     assert_eq!(chip8.regs.v[0xF], 0);
 }
+
+#[test]
+fn chip8_bcd() {
+    let mut chip8 = Chip8::new();
+    chip8.regs.i = 0x400;
+    chip8.regs.v[3] = 197;
+
+    chip8.exec_instr(0xF333);
+    assert_eq!(chip8.memory[0x400], 1);
+    assert_eq!(chip8.memory[0x401], 9);
+    assert_eq!(chip8.memory[0x402], 7);
+}

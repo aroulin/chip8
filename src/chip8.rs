@@ -9,15 +9,20 @@ mod display;
 mod chip8_tests;
 
 const MEM_SIZE: usize = 4 * 1024;
+const KBD_SIZE: usize = 16;
+
+//TODO: check assert and panic usage for error handling
 
 pub struct Chip8 {
     memory: Vec<u8>,
     regs: Registers,
     display: Display,
+    keyboard: Vec<bool>,
 
     /// legacy mode:
     /// SHR Vx, Vy => VF = Vy & 1; Vx = Vy >> 1;
     /// SHL Vx, Vy => VF = Vy & 1; Vx = Vy << 1;
+    ///
     /// Non-legacy-mode:
     /// SHR Vx, Vy => VF = Vx & 1; Vx = Vx >> 1
     /// SHL Vx, Vy => VF = Vx & 1; Vx = Vx << 1;
@@ -57,6 +62,7 @@ impl Chip8 {
             memory: vec![0; MEM_SIZE],
             regs: Registers::new(),
             display: Display::new(),
+            keyboard: vec![true; KBD_SIZE],
             legacy_mode: false,
         }
     }
@@ -210,18 +216,70 @@ impl Chip8 {
                 self.regs.v[0xF] = collision as u8;
             }
 
+            // Ex9E - SKP Vx - Skip next instruction if key with the value of Vx is pressed
+            // ExA1 - SKNP Vx - Skip next instruction if key with the value of Vx is not pressed
+            Opcode::RegImm { op: 0xE, x, kk } if kk == 0x9E || kk == 0xA1 => {
+                let key = self.regs.v[x] as usize;
+                if key > 0xF {
+                    panic!("instruction {:X} executed with Vx ({:X}) > 0xF", instr, key);
+                }
+
+                let pressed = self.keyboard[key];
+
+                if (kk == 0x9E && pressed) || (kk == 0xA1 && !pressed) {
+                    self.regs.pc += 2;
+                }
+            }
+
             // Fx07 - LD Vx, DT - Set Vx = delay timer value
             Opcode::RegImm { op: 0xF, x, kk: 0x07 } => self.regs.v[x] = self.regs.dt,
+
+            // Fx0A - LD Vx, K - Wait for a key press, store the value of the key in Vx
+            Opcode::RegImm { op: 0xF, x, kk: 0x0A } => {
+                //TODO: Fx0A - wait for key press
+            }
 
             // Fx15 - LD DT, Vx - Set delay timer = Vx
             Opcode::RegImm { op: 0xF, x, kk: 0x15 } => self.regs.dt = self.regs.v[x],
 
             // Fx18 - LD ST, Vx - Set sound timer = Vx
-            Opcode::RegImm{ op: 0xF, x, kk: 0x18 } => self.regs.st = self.regs.v[x],
+            Opcode::RegImm { op: 0xF, x, kk: 0x18 } => self.regs.st = self.regs.v[x],
 
             // Fx1E - ADD I, Vx => Set I = I + Vx
-            Opcode::RegImm{ op: 0xF, x, kk: 0x1E } =>
+            Opcode::RegImm { op: 0xF, x, kk: 0x1E } =>
                 self.regs.i = self.regs.i.wrapping_add(self.regs.v[x] as usize),
+
+            // Fx29 - LD F, Vx - Set I = location of sprite for digit Vx
+            Opcode::RegImm { op: 0xF, x, kk: 0x29 } => {
+                //TODO: Fx29 set sprite location for digit Vx
+            }
+
+            // Fx33 - LD B, Vx - Store BCD representation of Vx in memory locations I, I+1, and I+2
+            Opcode::RegImm { op: 0xF, x, kk: 0x33 } => {
+                //TODO: Fx33 store BCD representation
+            }
+
+            // Fx55 - LD [I], Vx - Store registers V0 through Vx in memory starting at location I
+            Opcode::RegImm { op: 0xF, x, kk: 0x55 } => {
+                for i in 0..(x + 1) {
+                    self.memory[self.regs.i + i] = self.regs.v[i];
+                }
+
+                if self.legacy_mode {
+                    self.regs.i += x + 1;
+                }
+            }
+
+            // Fx65 - LD Vx, [I] - Read registers V0 through Vx from memory starting at location I
+            Opcode::RegImm { op: 0xF, x, kk: 0x65 } => {
+                for i in 0..(x + 1) {
+                    self.regs.v[i] = self.memory[self.regs.i + i];
+                }
+
+                if self.legacy_mode {
+                    self.regs.i += x + 1;
+                }
+            }
 
             _ =>
                 panic!("Unknown instruction {:X}", instr)
