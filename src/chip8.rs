@@ -13,8 +13,6 @@ mod chip8_tests;
 const MEM_SIZE: usize = 4 * 1024;
 const KBD_SIZE: usize = 16;
 
-//TODO: check assert and panic usage for error handling
-
 pub struct Chip8 {
     memory: Vec<u8>,
     regs: Registers,
@@ -53,7 +51,7 @@ impl From<u16> for Opcode {
             0 | 1 | 2 | 0xA | 0xB => Opcode::Imm { op, nnn },
             3 | 4 | 6 | 7 | 0xC | 0xE | 0xF => Opcode::RegImm { op, x, kk },
             5 | 8 | 9 | 0xD => Opcode::RegReg { op, x, y, op2 },
-            _ => panic!("Unknown")
+            _ => panic!("Unknown instruction opcode {:X} when decoding", op)
         }
     }
 }
@@ -205,7 +203,7 @@ impl Chip8 {
             // Annn - LD I, addr - Set I = nnn
             Opcode::Imm { op: 0xA, nnn } => self.regs.i = nnn as usize,
 
-            // Bnnn - JP V0, addr - Jump to location nnn + V0 TODO: overflow?
+            // Bnnn - JP V0, addr - Jump to location nnn + V0 //TODO: overflow?
             Opcode::Imm { op: 0xB, nnn } => self.regs.pc = nnn + self.regs.v[0] as u16,
 
             // Cxkk - RND Vx, byte - Set Vx = random byte AND kk
