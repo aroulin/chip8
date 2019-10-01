@@ -1,3 +1,6 @@
+use std::thread::sleep;
+use std::time::{Duration, Instant};
+
 use display::Display;
 use display::Sprite;
 use registers::Registers;
@@ -14,6 +17,7 @@ const MEM_SIZE: usize = 4 * 1024;
 const KBD_SIZE: usize = 16;
 
 pub struct Chip8 {
+    running: bool,
     memory: Vec<u8>,
     regs: Registers,
     display: Display,
@@ -27,6 +31,9 @@ pub struct Chip8 {
     /// SHR Vx, Vy => VF = Vx & 1; Vx = Vx >> 1
     /// SHL Vx, Vy => VF = Vx & 1; Vx = Vx << 1;
     legacy_mode: bool,
+
+    render: Option<fn(&Vec<Vec<u8>>)>,
+    play_sound: Option<fn()>,
 }
 
 const INSTR_SIZE: u16 = 2;
@@ -59,11 +66,14 @@ impl From<u16> for Opcode {
 impl Chip8 {
     pub fn new() -> Chip8 {
         let mut chip8 = Chip8 {
+            running: false,
             memory: vec![0; MEM_SIZE],
             regs: Registers::new(),
             display: Display::new(),
             keyboard: vec![true; KBD_SIZE],
             legacy_mode: false,
+            render: None,
+            play_sound: None,
         };
 
         // store font data
@@ -74,9 +84,46 @@ impl Chip8 {
         chip8
     }
 
+    pub fn new_with_backend(render: fn(&Vec<Vec<u8>>), play_sound: fn()) -> Chip8 {
+        let mut chip8 = Chip8::new();
+        chip8.render = Some(render);
+        chip8.play_sound = Some(play_sound);
+        chip8
+    }
+
     pub fn run(&mut self) -> Result<(), std::io::Error> {
-        self.exec_instr(0x00E0);
+        self.running = true;
+        while self.running {
+            let old_frame_time = Instant::now();
+
+            while old_frame_time.elapsed() < Duration::from_millis(1000 / 60 /* 1/60Hz */) {
+                let pc = self.regs.pc as usize;
+                let instr = ((self.memory[pc] as u16) << 8) | (self.memory[pc + 1] as u16);
+                self.exec_instr(instr);
+                sleep(Duration::from_millis(1000 / 500 /* 1 / 500Hz */));
+            }
+
+            if self.regs.st > 0 {
+                self.regs.st -= 1;
+            }
+
+            if self.regs.dt > 0 {
+                if let Some(play_sound) = self.play_sound {
+                    play_sound();
+                }
+                self.regs.dt -= 1;
+            }
+
+            if let Some(render) = self.render {
+                render(self.pixels());
+            }
+        } // end while(running)
+
         return Ok(());
+    }
+
+    pub fn stop(&mut self) {
+        self.running = false;
     }
 
     pub fn pixels(&self) -> &Vec<Vec<u8>> {
