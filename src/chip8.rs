@@ -16,6 +16,9 @@ mod chip8_tests;
 const MEM_SIZE: usize = 4 * 1024;
 const KBD_SIZE: usize = 16;
 
+pub const DISPLAY_WIDTH: usize = 64;
+pub const DISPLAY_HEIGHT: usize = 32;
+
 pub struct Chip8 {
     running: bool,
     memory: Vec<u8>,

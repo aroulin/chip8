@@ -1,5 +1,4 @@
-const DISPLAY_WIDTH: usize = 64;
-const DISPLAY_HEIGHT: usize = 32;
+use crate::chip8::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
 
 pub struct Display {
     pixels: Vec<Vec<u8>>,
