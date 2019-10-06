@@ -72,7 +72,7 @@ pub fn main() {
     let play_sound = || {};
 
     let mut chip8 = Chip8::new_with_backend(&mut render, &play_sound, &mut check_input);
-    let mut f = File::open("test.ch8").unwrap();
+    let mut f = File::open("roms/test.ch8").unwrap();
     let mut buffer = Vec::new();
     // read the whole file
     f.read_to_end(&mut buffer).unwrap();
