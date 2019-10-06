@@ -269,7 +269,7 @@ impl Chip8 {
                 }
 
                 let sprite = Sprite::new(sprite_bytes);
-                let collision = self.display.draw_sprite(&sprite, x, y);
+                let collision = self.display.draw_sprite(&sprite, self.regs.v[x] as usize, self.regs.v[y] as usize);
                 self.regs.v[0xF] = collision as u8;
             }
 
