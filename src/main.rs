@@ -2,9 +2,10 @@ extern crate libc;
 extern crate sdl2;
 extern crate sdl2_sys;
 
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::time::Duration;
 
+use rand::random;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -26,6 +27,7 @@ pub fn main() {
     let mut canvas = window.into_canvas().build().unwrap();
 
     unsafe {
+        sdl2_sys::SDL_SetHint(CString::new("SDL_RENDER_SCALE_QUALITY").unwrap().as_ptr(), CString::new("SDL_RENDER_SCALE_QUALITY").unwrap().as_ptr());
         let err = sdl2_sys::SDL_RenderSetLogicalSize(sdl2_sys::SDL_GetRenderer(canvas.window_mut().raw()), chip8::DISPLAY_WIDTH as i32, chip8::DISPLAY_HEIGHT as i32);
         //let err = sdl2_sys::SDL_RenderSetLogicalSize(sdl2_sys::SDL_GetRenderer(canvas.window_mut().raw()), chip8::DISPLAY_WIDTH as i32, chip8::DISPLAY_HEIGHT as i32);
         if err != 0 {
@@ -33,20 +35,18 @@ pub fn main() {
         }
     }
 
-// canvas.window_mut().set_size((chip8::DISPLAY_WIDTH * DISPLAY_SCALE) as u32, (chip8::DISPLAY_HEIGHT * DISPLAY_SCALE) as u32).unwrap();
+    canvas.window_mut().set_size((chip8::DISPLAY_WIDTH * DISPLAY_SCALE) as u32, (chip8::DISPLAY_HEIGHT * DISPLAY_SCALE) as u32).unwrap();
 
-    canvas.set_draw_color(Color::RGB(255, 255, 255));
-    canvas.clear();
-    canvas.present();
+    let mut display = [Color::RGB(0, 0, 0); chip8::DISPLAY_WIDTH * chip8::DISPLAY_HEIGHT];
+
+    for i in 0..chip8::DISPLAY_WIDTH {
+        for j in 0..chip8::DISPLAY_HEIGHT {
+            display[i * chip8::DISPLAY_HEIGHT + j] = Color::RGB(random(), random(), random());
+        }
+    }
+
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
-        canvas.set_draw_color(Color::RGB(255, 255, 255));
-        canvas.clear();
-        for i in 0..chip8::DISPLAY_WIDTH {
-            canvas.set_draw_color(Color::RGB(i as u8, 0, 0));
-            canvas.draw_line(sdl2::rect::Point::new(i as i32, 0), sdl2::rect::Point::new(i as i32, chip8::DISPLAY_HEIGHT as i32)).unwrap();
-        }
-        canvas.present();
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } |
@@ -56,9 +56,17 @@ pub fn main() {
                 _ => {}
             }
         }
-        // The rest of the game loop goes here...
 
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
+        for i in 0..chip8::DISPLAY_WIDTH {
+            for j in 0..chip8::DISPLAY_HEIGHT {
+                canvas.set_draw_color(display[i * chip8::DISPLAY_HEIGHT + j]);
+                canvas.draw_point(sdl2::rect::Point::new(i as i32, j as i32)).unwrap();
+            }
+        }
         canvas.present();
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+
+        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 }
