@@ -19,7 +19,7 @@ const KBD_SIZE: usize = 16;
 pub const DISPLAY_WIDTH: usize = 64;
 pub const DISPLAY_HEIGHT: usize = 32;
 
-pub struct Chip8 {
+pub struct Chip8<'a> {
     running: bool,
     memory: Vec<u8>,
     regs: Registers,
@@ -35,8 +35,9 @@ pub struct Chip8 {
     /// SHL Vx, Vy => VF = Vx & 1; Vx = Vx << 1;
     legacy_mode: bool,
 
-    render: Option<fn(&Vec<Vec<u8>>)>,
-    play_sound: Option<fn()>,
+    render: Option<&'a mut dyn FnMut(Vec<Vec<u8>>)>,
+    play_sound: Option<&'a dyn Fn()>,
+    check_input: Option<&'a mut dyn FnMut(&mut bool, &mut Vec<bool>)>,
 }
 
 const INSTR_SIZE: u16 = 2;
@@ -66,8 +67,8 @@ impl From<u16> for Opcode {
     }
 }
 
-impl Chip8 {
-    pub fn new() -> Chip8 {
+impl Chip8<'_> {
+    pub fn new<'a>() -> Chip8<'a> {
         let mut chip8 = Chip8 {
             running: false,
             memory: vec![0; MEM_SIZE],
@@ -77,6 +78,7 @@ impl Chip8 {
             legacy_mode: false,
             render: None,
             play_sound: None,
+            check_input: None,
         };
 
         // store font data
@@ -87,10 +89,11 @@ impl Chip8 {
         chip8
     }
 
-    pub fn new_with_backend(render: fn(&Vec<Vec<u8>>), play_sound: fn()) -> Chip8 {
+    pub fn new_with_backend<'a>(render: &'a mut dyn FnMut(Vec<Vec<u8>>), play_sound: &'a dyn Fn(), check_input: &'a mut dyn FnMut(&mut bool, &mut Vec<bool>)) -> Chip8<'a> {
         let mut chip8 = Chip8::new();
         chip8.render = Some(render);
         chip8.play_sound = Some(play_sound);
+        chip8.check_input = Some(check_input);
         chip8
     }
 
@@ -122,14 +125,19 @@ impl Chip8 {
             }
 
             if self.regs.dt > 0 {
-                if let Some(play_sound) = self.play_sound {
+                if let Some(play_sound) = &self.play_sound {
                     play_sound();
                 }
                 self.regs.dt -= 1;
             }
 
-            if let Some(render) = self.render {
-                render(self.pixels());
+            if let Some(check_input) = &mut self.check_input {
+                check_input(&mut self.running, &mut self.keyboard);
+            }
+
+            let pixels = self.pixels();
+            if let Some(render) = &mut self.render {
+                render(pixels);
             }
         } // end while(running)
 
@@ -140,8 +148,8 @@ impl Chip8 {
         self.running = false;
     }
 
-    pub fn pixels(&self) -> &Vec<Vec<u8>> {
-        self.display.pixels()
+    pub fn pixels(&mut self) -> Vec<Vec<u8>> {
+        self.display.pixels().clone()
     }
 
     fn exec_instr(&mut self, instr: u16) {
