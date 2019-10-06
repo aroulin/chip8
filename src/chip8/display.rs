@@ -47,7 +47,7 @@ impl Display {
             for col_index in 0..8 {
                 let col = (x + col_index) % DISPLAY_WIDTH;
                 let pixel = self.pixels[row][col];
-                let new_pixel = pixel ^ (sprite.pixels[row] & (128u8 >> (col_index as u8)));
+                let new_pixel = pixel ^ ((sprite.pixels[row_index] & (128u8 >> (col_index as u8))) >> (7 - col_index) as u8);
 
                 if pixel == 1 && new_pixel == 0 {
                     collision = true;
