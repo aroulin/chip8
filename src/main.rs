@@ -3,12 +3,14 @@ extern crate sdl2;
 extern crate sdl2_sys;
 
 use std::ffi::{CStr, CString};
-use std::time::Duration;
+use std::fs::File;
+use std::io::prelude::*;
 
-use rand::random;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
+
+use crate::chip8::Chip8;
 
 pub mod chip8;
 
@@ -36,37 +38,44 @@ pub fn main() {
     }
 
     canvas.window_mut().set_size((chip8::DISPLAY_WIDTH * DISPLAY_SCALE) as u32, (chip8::DISPLAY_HEIGHT * DISPLAY_SCALE) as u32).unwrap();
-
-    let mut display = [Color::RGB(0, 0, 0); chip8::DISPLAY_WIDTH * chip8::DISPLAY_HEIGHT];
-
-    for i in 0..chip8::DISPLAY_WIDTH {
-        for j in 0..chip8::DISPLAY_HEIGHT {
-            display[i * chip8::DISPLAY_HEIGHT + j] = Color::RGB(random(), random(), random());
-        }
-    }
-
     let mut event_pump = sdl_context.event_pump().unwrap();
-    'running: loop {
+
+    let mut check_input = |running: &mut bool, _keyboard: &mut Vec<bool>| {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } |
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                    break 'running;
+                    *running = false;
                 }
                 _ => {}
             }
         }
+    };
 
+    let mut render = |display: Vec<Vec<u8>>| {
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
-        for i in 0..chip8::DISPLAY_WIDTH {
-            for j in 0..chip8::DISPLAY_HEIGHT {
-                canvas.set_draw_color(display[i * chip8::DISPLAY_HEIGHT + j]);
-                canvas.draw_point(sdl2::rect::Point::new(i as i32, j as i32)).unwrap();
+        for i in 0..chip8::DISPLAY_HEIGHT {
+            for j in 0..chip8::DISPLAY_WIDTH {
+                let color = if display[i][j] == 1 {
+                    Color::RGB(0, 0, 0)
+                } else {
+                    Color::RGB(255, 255, 255)
+                };
+                canvas.set_draw_color(color);
+                canvas.draw_point(sdl2::rect::Point::new(j as i32, i as i32)).unwrap();
             }
         }
         canvas.present();
+    };
 
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-    }
+    let play_sound = || {};
+
+    let mut chip8 = Chip8::new_with_backend(&mut render, &play_sound, &mut check_input);
+    let mut f = File::open("test.ch8").unwrap();
+    let mut buffer = Vec::new();
+    // read the whole file
+    f.read_to_end(&mut buffer).unwrap();
+    chip8.load_rom(buffer).unwrap();
+    chip8.run().unwrap();
 }
