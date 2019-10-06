@@ -94,6 +94,17 @@ impl Chip8 {
         chip8
     }
 
+    pub fn load_rom(&mut self, rom: Vec<u8>) -> Result<(), std::io::Error> {
+        for byte in rom {
+            self.memory[self.regs.pc as usize] = byte;
+            self.regs.pc += 1;
+        }
+
+        self.regs.pc = 0x200;
+
+        Ok(())
+    }
+
     pub fn run(&mut self) -> Result<(), std::io::Error> {
         self.running = true;
         while self.running {
