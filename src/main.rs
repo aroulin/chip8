@@ -39,7 +39,7 @@ pub fn main() {
     canvas.window_mut().set_size((chip8::DISPLAY_WIDTH * DISPLAY_SCALE) as u32, (chip8::DISPLAY_HEIGHT * DISPLAY_SCALE) as u32).unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut check_input = |running: &mut bool, keyboard: &mut Vec<bool>| {
+    let mut check_input = |running: &mut bool, keypad: &mut Vec<bool>| {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } |
@@ -50,26 +50,26 @@ pub fn main() {
             }
         }
 
-        let keyboard_state = sdl2::keyboard::KeyboardState::new(&event_pump);
-        keyboard[1] = keyboard_state.is_scancode_pressed(Scancode::Num1);
-        keyboard[2] = keyboard_state.is_scancode_pressed(Scancode::Num2);
-        keyboard[3] = keyboard_state.is_scancode_pressed(Scancode::Num3);
-        keyboard[12] = keyboard_state.is_scancode_pressed(Scancode::Num4);
+        let keyboard = sdl2::keyboard::KeyboardState::new(&event_pump);
+        keypad[1] = keyboard.is_scancode_pressed(Scancode::Num1);
+        keypad[2] = keyboard.is_scancode_pressed(Scancode::Num2);
+        keypad[3] = keyboard.is_scancode_pressed(Scancode::Num3);
+        keypad[12] = keyboard.is_scancode_pressed(Scancode::Num4);
 
-        keyboard[4] = keyboard_state.is_scancode_pressed(Scancode::Q);
-        keyboard[5] = keyboard_state.is_scancode_pressed(Scancode::W);
-        keyboard[6] = keyboard_state.is_scancode_pressed(Scancode::E);
-        keyboard[13] = keyboard_state.is_scancode_pressed(Scancode::R);
+        keypad[4] = keyboard.is_scancode_pressed(Scancode::Q);
+        keypad[5] = keyboard.is_scancode_pressed(Scancode::W);
+        keypad[6] = keyboard.is_scancode_pressed(Scancode::E);
+        keypad[13] = keyboard.is_scancode_pressed(Scancode::R);
 
-        keyboard[7] = keyboard_state.is_scancode_pressed(Scancode::A);
-        keyboard[8] = keyboard_state.is_scancode_pressed(Scancode::S);
-        keyboard[9] = keyboard_state.is_scancode_pressed(Scancode::D);
-        keyboard[14] = keyboard_state.is_scancode_pressed(Scancode::F);
+        keypad[7] = keyboard.is_scancode_pressed(Scancode::A);
+        keypad[8] = keyboard.is_scancode_pressed(Scancode::S);
+        keypad[9] = keyboard.is_scancode_pressed(Scancode::D);
+        keypad[14] = keyboard.is_scancode_pressed(Scancode::F);
 
-        keyboard[10] = keyboard_state.is_scancode_pressed(Scancode::Z);
-        keyboard[11] = keyboard_state.is_scancode_pressed(Scancode::X);
-        keyboard[0] = keyboard_state.is_scancode_pressed(Scancode::C);
-        keyboard[15] = keyboard_state.is_scancode_pressed(Scancode::V);
+        keypad[10] = keyboard.is_scancode_pressed(Scancode::Z);
+        keypad[11] = keyboard.is_scancode_pressed(Scancode::X);
+        keypad[0] = keyboard.is_scancode_pressed(Scancode::C);
+        keypad[15] = keyboard.is_scancode_pressed(Scancode::V);
     };
 
     let mut render = |display: Vec<Vec<u8>>| {

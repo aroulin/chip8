@@ -24,7 +24,7 @@ pub struct Chip8<'a> {
     memory: Vec<u8>,
     regs: Registers,
     display: Display,
-    keyboard: Vec<bool>,
+    keypad: Vec<bool>,
 
     /// legacy mode:
     /// SHR Vx, Vy => VF = Vy & 1; Vx = Vy >> 1;
@@ -74,7 +74,7 @@ impl Chip8<'_> {
             memory: vec![0; MEM_SIZE],
             regs: Registers::new(),
             display: Display::new(),
-            keyboard: vec![true; KBD_SIZE],
+            keypad: vec![true; KBD_SIZE],
             legacy_mode: false,
             render: None,
             play_sound: None,
@@ -132,7 +132,7 @@ impl Chip8<'_> {
             }
 
             if let Some(check_input) = &mut self.check_input {
-                check_input(&mut self.running, &mut self.keyboard);
+                check_input(&mut self.running, &mut self.keypad);
             }
 
             let pixels = self.pixels();
@@ -300,7 +300,7 @@ impl Chip8<'_> {
                     panic!("instruction {:X} executed with Vx ({:X}) > 0xF", instr, key);
                 }
 
-                let pressed = self.keyboard[key];
+                let pressed = self.keypad[key];
 
                 if (kk == 0x9E && pressed) || (kk == 0xA1 && !pressed) {
                     self.regs.pc += 2;
@@ -315,7 +315,7 @@ impl Chip8<'_> {
                 //TODO: optimize waiting
                 let mut key_pressed = None;
                 while key_pressed == None {
-                    key_pressed = self.keyboard.iter().position(|k| *k);
+                    key_pressed = self.keypad.iter().position(|k| *k);
                 };
 
                 self.regs.v[x] = key_pressed.unwrap() as u8;
