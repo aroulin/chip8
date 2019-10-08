@@ -11,7 +11,7 @@ pub struct Sprite {
 
 impl Sprite {
     pub fn new(sprite: Vec<u8>) -> Sprite {
-        assert!(sprite.len() > 1);
+        //assert!(sprite.len() > 1);
         assert!(sprite.len() < 16);
 
         Sprite {
