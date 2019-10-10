@@ -72,7 +72,7 @@ pub fn main() {
         keypad[15] = keyboard.is_scancode_pressed(Scancode::V);
     };
 
-    let mut render = |display: Vec<Vec<u8>>| {
+    let mut render = |display: &Vec<Vec<u8>>| {
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         //canvas.clear();
         for i in 0..chip8::DISPLAY_HEIGHT {

@@ -35,7 +35,7 @@ pub struct Chip8<'a> {
     /// SHL Vx, Vy => VF = Vx & 1; Vx = Vx << 1;
     legacy_mode: bool,
 
-    render: Option<&'a mut dyn FnMut(Vec<Vec<u8>>)>,
+    render: Option<&'a mut dyn FnMut(&Vec<Vec<u8>>)>,
     play_sound: Option<&'a dyn Fn()>,
     check_input: Option<&'a mut dyn FnMut(&mut bool, &mut Vec<bool>)>,
 }
@@ -89,7 +89,7 @@ impl Chip8<'_> {
         chip8
     }
 
-    pub fn new_with_backend<'a>(render: &'a mut dyn FnMut(Vec<Vec<u8>>), play_sound: &'a dyn Fn(), check_input: &'a mut dyn FnMut(&mut bool, &mut Vec<bool>)) -> Chip8<'a> {
+    pub fn new_with_backend<'a>(render: &'a mut dyn FnMut(&Vec<Vec<u8>>), play_sound: &'a dyn Fn(), check_input: &'a mut dyn FnMut(&mut bool, &mut Vec<bool>)) -> Chip8<'a> {
         let mut chip8 = Chip8::new();
         chip8.render = Some(render);
         chip8.play_sound = Some(play_sound);
@@ -135,9 +135,8 @@ impl Chip8<'_> {
                 check_input(&mut self.running, &mut self.keypad);
             }
 
-            let pixels = self.pixels();
             if let Some(render) = &mut self.render {
-                render(pixels);
+                render(self.display.pixels());
             }
         } // end while(running)
 
@@ -146,10 +145,6 @@ impl Chip8<'_> {
 
     pub fn stop(&mut self) {
         self.running = false;
-    }
-
-    pub fn pixels(&mut self) -> Vec<Vec<u8>> {
-        self.display.pixels().clone()
     }
 
     fn exec_instr(&mut self, instr: u16) {
