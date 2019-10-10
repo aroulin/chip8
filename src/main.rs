@@ -74,7 +74,7 @@ pub fn main() {
 
     let mut render = |display: Vec<Vec<u8>>| {
         canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
+        //canvas.clear();
         for i in 0..chip8::DISPLAY_HEIGHT {
             for j in 0..chip8::DISPLAY_WIDTH {
                 let color = if display[i][j] == 1 {
