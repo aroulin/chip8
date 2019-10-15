@@ -259,7 +259,7 @@ impl Chip8<'_> {
 
             // 9xy0 - SNE Vx, Vy - Skip next instruction if Vx != Vy
             Opcode::RegReg { op: 9, x, y, op2: 0 } => {
-                if self.regs.v[x] == self.regs.v[y] {
+                if self.regs.v[x] != self.regs.v[y] {
                     self.regs.pc += INSTR_SIZE;
                 }
             }
