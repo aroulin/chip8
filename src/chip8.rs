@@ -307,13 +307,19 @@ impl Chip8<'_> {
 
             // Fx0A - LD Vx, K - Wait for a key press, store the value of the key in Vx
             Opcode::RegImm { op: 0xF, x, kk: 0x0A } => {
-                //TODO: optimize waiting
                 let mut key_pressed = None;
                 while key_pressed == None {
-                    key_pressed = self.keypad.iter().position(|k| *k);
-                };
+                    if let Some(check_input) = &mut self.check_input {
+                        check_input(&mut self.running, &mut self.keypad);
+                        key_pressed = self.keypad.iter().position(|k| *k);
+                    }
 
-                self.regs.v[x] = key_pressed.unwrap() as u8;
+                    let pixels = self.display.pixels();
+                    if let Some(render) = &mut self.render {
+                        render(pixels);
+                    }
+                }
+                self.regs.v[x] = (key_pressed.unwrap()) as u8
             }
 
             // Fx15 - LD DT, Vx - Set delay timer = Vx
