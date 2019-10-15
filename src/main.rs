@@ -2,6 +2,7 @@ extern crate libc;
 extern crate sdl2;
 extern crate sdl2_sys;
 
+use std::env;
 use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::prelude::*;
@@ -93,7 +94,13 @@ pub fn main() {
 
     let mut chip8 = Chip8::new_with_backend(&mut render, &play_sound, &mut check_input);
 
-    let mut rom = File::open("roms/CAVE.ch8").unwrap();
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("Usage: chip8 <rom>");
+        return;
+    }
+
+    let mut rom = File::open(&args[1]).unwrap();
     let mut rom_buffer = Vec::new();
     rom.read_to_end(&mut rom_buffer).unwrap();
 
