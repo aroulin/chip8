@@ -29,10 +29,7 @@ cargo run roms/CAVE.ch8
 ```
 
 #### Screenshots
-![alt text](roms/chip8_3.png)
 
-![alt text](roms/chip8_4.png)
-
-![alt text](roms/chip8_2.png)
-
-![alt text](roms/chip8_1.png)
+![alt text](roms/chip8_3.png)|![alt text](roms/chip8_4.png)
+:-----------:|:-----------:
+![alt text](roms/chip8_2.png)|![alt text](roms/chip8_1.png)
